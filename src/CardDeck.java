@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class CardDeck {
+public abstract class CardDeck {
     private ArrayList<DevelopmentCard> cardsArray;
     private int size;
 

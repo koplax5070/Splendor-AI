@@ -1,4 +1,3 @@
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -21,9 +20,9 @@ abstract class Agent {
      * @param state - game state at some point in the game
      * @return array of available TakeTokensMoves for the given state
      */
-    private ArrayList<TakeTokensMove> getAvailableTakeTokensMoves(final GameState state) {
+    public ArrayList<TakeTokensMove> getAvailableTakeTokensMoves(final GameState state) {
         int player = state.getPlayerToMove();
-        int[] playerTokens = {0, 0, 0, 0, 0};
+        int[] playerTokens = new int[6];
         if(player == 1)
             playerTokens = state.getPlayer1Tokens();
         if(player == 2)
@@ -216,7 +215,7 @@ abstract class Agent {
                                             // Return two different tokens
                                             for(int t = 0; t < playerTokens.length - 2; t ++)
                                                 if(playerTokens[t] + tokensToTake[t] >= 1)
-                                                    for(int u = 0; u < playerTokens.length - 1; u ++)
+                                                    for(int u = t + 1; u < playerTokens.length - 1; u ++)
                                                         if(playerTokens[u] + tokensToTake[u] >= 1) {
                                                             tokensToReturn[t] = 1;
                                                             tokensToReturn[u] = 1;
@@ -285,6 +284,13 @@ abstract class Agent {
 
         }
 
+        // Exception case - player has no available moves but opponent does, forcing player to take 0 tokens
+        if(state.playerHasNoValidMoves(player) && !state.isGameOver()) {
+            int[] tokensToTake = {0, 0, 0, 0, 0};
+            int[] tokensToReturn = {0, 0, 0, 0, 0};
+            moveList.add(new TakeTokensMove(player, tokensToTake, tokensToReturn));
+        }
+
         // Remove moves leading to identical states
         return removeIdenticalTakeTokensMoves(state, moveList);
     }
@@ -293,7 +299,7 @@ abstract class Agent {
      * @param state - game state at some point in the game
      * @return array of available ReserveCardMoves for the given state
      */
-    private ArrayList<ReserveCardMove> getAvailableReserveCardMoves(final GameState state) {
+    public ArrayList<ReserveCardMove> getAvailableReserveCardMoves(final GameState state) {
         ArrayList<ReserveCardMove> resultArray = new ArrayList<>();
         int player = state.getPlayerToMove();
 
@@ -328,15 +334,18 @@ abstract class Agent {
                         // Go through all tiers and cards, including blind reserve
                         for(int j = 0; j < state.getTier1Market().size(); j ++)
                             resultArray.add(new ReserveCardMove(player, j, 1, tokensToReturn));
-                        resultArray.add(new ReserveCardMove(player, 4, 1, tokensToReturn));
+                        if(!state.getTier1Deck().isEmpty())
+                            resultArray.add(new ReserveCardMove(player, 4, 1, tokensToReturn));
 
                         for(int j = 0; j < state.getTier2Market().size(); j ++)
                             resultArray.add(new ReserveCardMove(player, j, 2, tokensToReturn));
-                        resultArray.add(new ReserveCardMove(player, 4, 2, tokensToReturn));
+                        if(!state.getTier2Deck().isEmpty())
+                            resultArray.add(new ReserveCardMove(player, 4, 2, tokensToReturn));
 
                         for(int j = 0; j < state.getTier3Market().size(); j ++)
                             resultArray.add(new ReserveCardMove(player, j, 3, tokensToReturn));
-                        resultArray.add(new ReserveCardMove(player, 4, 3, tokensToReturn));
+                        if(!state.getTier3Deck().isEmpty())
+                            resultArray.add(new ReserveCardMove(player, 4, 3, tokensToReturn));
 
                         tokensToReturn[i] = 0;
                     }
@@ -345,15 +354,18 @@ abstract class Agent {
                 // Go through all tiers and cards, including blind reserve
                 for(int i = 0; i < state.getTier1Market().size(); i ++)
                     resultArray.add(new ReserveCardMove(player, i, 1, tokensToReturn));
-                resultArray.add(new ReserveCardMove(player, 4, 1, tokensToReturn));
+                if(!state.getTier1Deck().isEmpty())
+                    resultArray.add(new ReserveCardMove(player, 4, 1, tokensToReturn));
 
                 for(int i = 0; i < state.getTier2Market().size(); i ++)
                     resultArray.add(new ReserveCardMove(player, i, 2, tokensToReturn));
-                resultArray.add(new ReserveCardMove(player, 4, 2, tokensToReturn));
+                if(!state.getTier2Deck().isEmpty())
+                    resultArray.add(new ReserveCardMove(player, 4, 2, tokensToReturn));
 
                 for(int i = 0; i < state.getTier3Market().size(); i ++)
                     resultArray.add(new ReserveCardMove(player, i, 3, tokensToReturn));
-                resultArray.add(new ReserveCardMove(player, 4, 3, tokensToReturn));
+                if(!state.getTier3Deck().isEmpty())
+                    resultArray.add(new ReserveCardMove(player, 4, 3, tokensToReturn));
             }
         }
 
@@ -364,7 +376,7 @@ abstract class Agent {
      * @param state - game state at some point in the game
      * @return array of available ReserveCardMoves for the given state
      */
-    private ArrayList<BuyCardMove> getAvailableBuyCardMoves(final GameState state) {
+    public ArrayList<BuyCardMove> getAvailableBuyCardMoves(final GameState state) {
         ArrayList<BuyCardMove> movesList = new ArrayList<>();
         int player = state.getPlayerToMove();
         int[] playerCards = new int[5];
@@ -377,19 +389,19 @@ abstract class Agent {
                 playerCards[i] = state.getPlayer2Cards()[i];
         }
 
-        // Only check moves attracting nobles if player has 3 piles larger than 3 cards, or 2 piles larger than 4 cards
-        int noStacks3Cards = 0, noStacks4Cards = 0;
-        for (int i = 0; i < playerCards.length; i++) {
-            if (playerCards[i] >= 4) {
-                noStacks3Cards++;
-                noStacks4Cards++;
-            } else if (playerCards[i] >= 3) {
-                noStacks3Cards++;
+        // Only check moves attracting nobles if player has 3 piles larger than 2 cards, or 2 piles larger than 3 cards
+        int numStacks2Cards = 0, numStacks3Cards = 0;
+        for (int playerCard : playerCards) {
+            if (playerCard >= 3) {
+                numStacks3Cards++;
+                numStacks2Cards++;
+            } else if (playerCard >= 2) {
+                numStacks2Cards++;
             }
         }
 
         for (int nobleIndex = -1; nobleIndex < state.getNoblesMarket().size(); nobleIndex ++) {
-            if (nobleIndex < 0 || (noStacks3Cards >= 3 || noStacks4Cards >= 2)) {
+            if (nobleIndex < 0 || (numStacks2Cards >= 3 || numStacks3Cards >= 2)) {
                 for (int tier = 0; tier <= 3; tier++) {
                     int numberTierCards = 0;
                     if (tier == 0) {

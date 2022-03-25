@@ -5,20 +5,22 @@ import java.util.Random;
 // Representation of a Splendor game state, including all information regarding a given position in the game
 // Currently tuned for the 2-player version of the game, but might be adapted in the future
 public class GameState {
-    private int playerToMove, playerStarted;
+    private int playerToMove;
+    private final int playerStarted;
     private boolean lastTurn, gameOver;
     private int player1Score, player2Score;
+    private int turnNumber;
 
     // Tokens in the supply, as well as in player1 and player2's possession, will be represented as arrays
     // The order will be: black, blue, green, red, white, gold
-    private int[] supplyTokens = {4, 4, 4, 4, 4, 5};
-    private int[] player1Tokens = {0, 0, 0, 0, 0, 0};
-    private int[] player2Tokens = {0, 0, 0, 0, 0, 0};
+    private int[] supplyTokens;
+    private int[] player1Tokens;
+    private int[] player2Tokens;
 
     // Number of development cards of each type in each player's possession
     // Order: black, blue, green, red, white
-    private int[] player1Cards = {0, 0, 0, 0, 0};
-    private int[] player2Cards = {0, 0, 0, 0, 0};
+    private int[] player1Cards;
+    private int[] player2Cards;
 
     private ArrayList<NobleTile> noblesMarket;
     private ArrayList<DevelopmentCard> tier1Market, tier2Market, tier3Market;
@@ -32,9 +34,18 @@ public class GameState {
     // as well as 3 noble tiles available for players to attract. Randomly selects the starting player
     public GameState() {
         Random random = new Random();
+
+        // Set up game
+        supplyTokens = new int[]{4, 4, 4, 4, 4, 5};
+        player1Tokens = new int[]{0, 0, 0, 0, 0, 0};
+        player2Tokens = new int[]{0, 0, 0, 0, 0, 0};
+        player1Cards = new int[]{0, 0, 0, 0, 0};
+        player2Cards = new int[]{0, 0, 0, 0, 0};
+
         // Select player to go first
         playerToMove = random.nextInt(2) + 1;
         playerStarted = playerToMove;
+        turnNumber = 0;
         lastTurn = false;
         gameOver = false;
 
@@ -69,10 +80,17 @@ public class GameState {
 
     // Sets up a specific game state for a 2 player game of splendor, given all the needed information
     public GameState(GameState state) {
+        // Set up game
+        supplyTokens = new int[]{4, 4, 4, 4, 4, 5};
+        player1Tokens = new int[]{0, 0, 0, 0, 0, 0};
+        player2Tokens = new int[]{0, 0, 0, 0, 0, 0};
+        player1Cards = new int[]{0, 0, 0, 0, 0};
+        player2Cards = new int[]{0, 0, 0, 0, 0};
 
         // Set player to go first
         playerToMove = state.getPlayerToMove();
         playerStarted = state.getPlayerStarted();
+        turnNumber = 0;
         lastTurn = state.isLastTurn();
         gameOver = state.isGameOver();
 
@@ -282,8 +300,13 @@ public class GameState {
         if(gameOver)
             return false;
 
-        // Check tokens can be taken
-        if(!canTakeTokens(move.getTokensToTake()))
+        // Check tokens can be taken, or that player is forced to take 0 tokens (due to having no available moves,
+        // while opponent has available moves)
+        int totalTokensToTake = 0;
+        for(int i = 0; i < move.getTokensToTake().length; i ++)
+            totalTokensToTake += move.getTokensToTake()[i];
+        if(!(canTakeTokens(move.getTokensToTake()) ||
+                playerHasNoValidMoves(player) && !isStalemate() && totalTokensToTake == 0))
             return false;
 
         if(!canReturnTokens(player, move.getTokensToTake(), move.getTokensToReturn()))
@@ -348,9 +371,17 @@ public class GameState {
         if(move.getChosenNobleIndex() != -1)
             awardNobleTile(player, move.getChosenNobleIndex());
 
+        // Increment Turn Counter
+        if(playerStarted == player)
+            turnNumber ++;
+
         // Check game over conditions
         checkGameIsEnding();
         if(lastTurn && player != playerStarted) {
+            lastTurn = false;
+            gameOver = true;
+        }
+        if(isStalemate()) {
             lastTurn = false;
             gameOver = true;
         }
@@ -403,8 +434,16 @@ public class GameState {
                 return null;
         }
 
+        // Increment Turn Counter
+        if(playerStarted == player)
+            turnNumber ++;
+
         // Check game over conditions
         if(lastTurn && player != playerStarted) {
+            lastTurn = false;
+            gameOver = true;
+        }
+        if(isStalemate()) {
             lastTurn = false;
             gameOver = true;
         }
@@ -428,8 +467,16 @@ public class GameState {
         transferTokensToPlayer(player, move.getTokensToTake());
         transferTokensToSupply(player, move.getTokensToReturn());
 
+        // Increment Turn Counter
+        if(playerStarted == player)
+            turnNumber ++;
+
         // Check game over conditions
         if(lastTurn && player != playerStarted) {
+            lastTurn = false;
+            gameOver = true;
+        }
+        if(isStalemate()) {
             lastTurn = false;
             gameOver = true;
         }
@@ -640,6 +687,47 @@ public class GameState {
         if(player1Score >= 15 || player2Score >= 15)
             lastTurn = true;
         return player1Score >= 15 || player2Score >= 15;
+    }
+
+    // We define a stalemate as a situation in which neither player has any valid moves.
+    // If only one player has no valid moves, they must take 0 tokens (pass) to the next player
+    // In a stalemate, the supply is empty except for gold tokens, no reservations can be made, and neither player can
+    // afford any card. In a stalemate situation, we consider the player with the highest score the winner
+    // We also force a game to be a stalemate if it passes 300 turns.
+    public boolean isStalemate() {
+        return (playerHasNoValidMoves(1) && playerHasNoValidMoves(2)) || turnNumber == 300;
+    }
+
+    // A player may be forced to take 0 tokens if they cannot make any valid move, but their opponent has a valid move
+    // that can be made. If the opponent doesn't have a valid move either, the game is a stalemate.
+    public boolean playerHasNoValidMoves(int player) {
+        if(player != 1 && player != 2)
+            return true;
+
+        int reserveSize = switch(player) {
+            case 1 -> player1Reserve.size();
+            case 2 -> player2Reserve.size();
+            default -> 3;
+        };
+
+        for(int i = 0; i < supplyTokens.length - 1; i ++)
+            if(supplyTokens[i] > 0)
+                return false;
+
+        if(reserveSize < 3)
+            return false;
+
+        for (DevelopmentCard developmentCard : tier1Market)
+            if (playerAffordsCard(player, developmentCard))
+                return false;
+        for (DevelopmentCard developmentCard : tier2Market)
+            if (playerAffordsCard(player, developmentCard))
+                return false;
+        for (DevelopmentCard developmentCard : tier3Market)
+            if (playerAffordsCard(player, developmentCard))
+                return false;
+
+        return true;
     }
 
     private boolean canTakeTokens(int[] tokensToTake) {
@@ -906,11 +994,6 @@ public class GameState {
         return s + " ".repeat(Math.max(0, k - s.length()));
     }
 
-    // DEBUG METHOD
-    private void printMessage(String message) {
-        System.out.println(message);
-    }
-
     // Getters
     public int getWinner() {
         if(!gameOver)
@@ -929,6 +1012,10 @@ public class GameState {
 
     public boolean isLastTurn() {
         return lastTurn;
+    }
+
+    public int getTurnNumber() {
+        return turnNumber;
     }
 
     public int getPlayerStarted() {
@@ -1001,27 +1088,5 @@ public class GameState {
 
     public ArrayList<NobleTile> getNoblesMarket() {
         return noblesMarket;
-    }
-
-    // Setters (only for use in copied instances of a state)
-    public void setTier1Market(ArrayList<DevelopmentCard> cards) {
-        if (tier1Market.size() > 0) {
-            tier1Market.subList(0, tier1Market.size()).clear();
-        }
-        for (DevelopmentCard card : cards) tier1Market.add(new DevelopmentCard(card));
-    }
-
-    public void setTier2Market(ArrayList<DevelopmentCard> cards) {
-        if (tier2Market.size() > 0) {
-            tier2Market.subList(0, tier2Market.size()).clear();
-        }
-        for (DevelopmentCard card : cards) tier2Market.add(new DevelopmentCard(card));
-    }
-
-    public void setTier3Market(ArrayList<DevelopmentCard> cards) {
-        if (tier3Market.size() > 0) {
-            tier3Market.subList(0, tier3Market.size()).clear();
-        }
-        for (DevelopmentCard card : cards) tier3Market.add(new DevelopmentCard(card));
     }
 }

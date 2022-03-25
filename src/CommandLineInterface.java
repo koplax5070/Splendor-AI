@@ -1,13 +1,7 @@
-import javax.sound.midi.SysexMessage;
-import java.awt.datatransfer.MimeTypeParseException;
-import java.awt.desktop.SystemSleepEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Optional;
 
 // Implements a command line interface, handling display of the current state, and parsing of moves, which are
 // passed to the game engine
@@ -68,9 +62,10 @@ public class CommandLineInterface {
         else if(mode == GameMode.PVC) {
 
             // Choosing agent to play against
-            System.out.println("You are Player 1. Choose agent to play against:\n" +
-                    "1. Random Move Agent\n" +
-                    "2. Minimax Agent");
+            System.out.println("""
+                    You are Player 1. Choose agent to play against:
+                    1. Random Move Agent
+                    2. Minimax Agent""");
             int chosenAgentIndex = 0;
             while(chosenAgentIndex == 0) {
                 String input = reader.readLine();
@@ -84,7 +79,32 @@ public class CommandLineInterface {
             Agent agent = null;
             switch (chosenAgentIndex) {
                 case 1 -> agent = new RandomMoveAgent();
-                case 2 -> agent = new MinimaxAgent();
+                case 2 -> {
+                    double hasWon = 20000.0;
+                    double isWinning = 10000.0;
+                    double currentPoints = 300.0;
+                    double opponentPoints = -300.0;
+                    double maxImmediatePoints = 200;
+                    double buyFromMarketIndex = 0;
+                    double buyFromReserveIndex = 10;
+                    double attractNobleIndex = 10;
+                    double numCardsToReserve = 10;
+                    double totalTokens = 0;
+
+                    ArrayList<Double> weights = new ArrayList<>();
+                    weights.add(hasWon); // hasWon
+                    weights.add(isWinning); // isWinning
+                    weights.add(currentPoints); // currentPoints
+                    weights.add(opponentPoints); // opponentPoints
+                    weights.add(maxImmediatePoints); // maxImmediatePoints
+                    weights.add(buyFromMarketIndex); // buyFromMarketIndex
+                    weights.add(buyFromReserveIndex); // buyFromReserveIndex
+                    weights.add(attractNobleIndex); // attractNobleIndex
+                    weights.add(numCardsToReserve); // numCardsToReserve
+                    weights.add(totalTokens); // totalTokens
+
+                    agent = new MinimaxAgent(5, 0, 0, weights);
+                }
                 default -> {
                     System.out.println("Fatal error. Shutting down.");
                     System.exit(1);
@@ -95,7 +115,7 @@ public class CommandLineInterface {
             while(!state.isGameOver()) {
                 System.out.println(state.toString());
                 if(lastMove != null)
-                    System.out.println("Last action: " + lastMove.toString());
+                    System.out.println("Last action: " + lastMove);
 
                 Move currentMove = null;
                 while(currentMove == null && !state.isGameOver()) {
@@ -131,9 +151,10 @@ public class CommandLineInterface {
         else if(mode == GameMode.CVC) {
 
             // Choosing agents to play against each other
-            System.out.println("Choose agent for Player 1:\n" +
-                    "1. Random Move Agent\n" +
-                    "2. Minimax Agent");
+            System.out.println("""
+                    Choose agent for Player 1:
+                    1. Random Move Agent
+                    2. Minimax Agent""");
             int chosenAgent1Index = 0;
             while(chosenAgent1Index == 0) {
                 String input = reader.readLine();
@@ -144,9 +165,10 @@ public class CommandLineInterface {
                 }
             }
 
-            System.out.println("Choose agent for Player 2:\n" +
-                    "1. Random Move Agent\n" +
-                    "2. Minimax Agent");
+            System.out.println("""
+                    Choose agent for Player 2:
+                    1. Random Move Agent
+                    2. Minimax Agent""");
             int chosenAgent2Index = 0;
             while(chosenAgent2Index == 0) {
                 String input = reader.readLine();
@@ -157,11 +179,45 @@ public class CommandLineInterface {
                 }
             }
 
+            System.out.println("Input number of games to play:");
+            int numberOfGames = 0;
+            while(numberOfGames <= 0) {
+                String input = reader.readLine();
+                numberOfGames = Integer.parseInt(input);
+                if(numberOfGames <= 0)
+                    System.out.println("Please enter a valid number.");
+            }
+
             Agent agent1 = null, agent2 = null;
 
             switch(chosenAgent1Index) {
                 case 1 -> agent1 = new RandomMoveAgent();
-                case 2 -> agent1 = new MinimaxAgent();
+                case 2 -> {
+                    double hasWon = 20000.0;
+                    double isWinning = 10000.0;
+                    double currentPoints = 300.0;
+                    double opponentPoints = -300.0;
+                    double maxImmediatePoints = 200;
+                    double buyFromMarketIndex = 0;
+                    double buyFromReserveIndex = 10;
+                    double attractNobleIndex = 10;
+                    double numCardsToReserve = 10;
+                    double totalTokens = 0;
+
+                    ArrayList<Double> weights = new ArrayList<>();
+                    weights.add(hasWon); // hasWon
+                    weights.add(isWinning); // isWinning
+                    weights.add(currentPoints); // currentPoints
+                    weights.add(opponentPoints); // opponentPoints
+                    weights.add(maxImmediatePoints); // maxImmediatePoints
+                    weights.add(buyFromMarketIndex); // buyFromMarketIndex
+                    weights.add(buyFromReserveIndex); // buyFromReserveIndex
+                    weights.add(attractNobleIndex); // attractNobleIndex
+                    weights.add(numCardsToReserve); // numCardsToReserve
+                    weights.add(totalTokens); // totalTokens
+
+                    agent1 = new MinimaxAgent(5, 0, 0, weights);
+                }
                 default -> {
                     System.out.println("Fatal Error. Shutting Down.");
                     System.exit(1);
@@ -170,7 +226,32 @@ public class CommandLineInterface {
 
             switch(chosenAgent2Index) {
                 case 1 -> agent2 = new RandomMoveAgent();
-                case 2 -> agent2 = new MinimaxAgent();
+                case 2 -> {
+                    double hasWon = 20000.0;
+                    double isWinning = 10000.0;
+                    double currentPoints = 300.0;
+                    double opponentPoints = -300.0;
+                    double maxImmediatePoints = 200;
+                    double buyFromMarketIndex = 0;
+                    double buyFromReserveIndex = 10;
+                    double attractNobleIndex = 10;
+                    double numCardsToReserve = 10;
+                    double totalTokens = 0;
+
+                    ArrayList<Double> weights = new ArrayList<>();
+                    weights.add(hasWon); // hasWon
+                    weights.add(isWinning); // isWinning
+                    weights.add(currentPoints); // currentPoints
+                    weights.add(opponentPoints); // opponentPoints
+                    weights.add(maxImmediatePoints); // maxImmediatePoints
+                    weights.add(buyFromMarketIndex); // buyFromMarketIndex
+                    weights.add(buyFromReserveIndex); // buyFromReserveIndex
+                    weights.add(attractNobleIndex); // attractNobleIndex
+                    weights.add(numCardsToReserve); // numCardsToReserve
+                    weights.add(totalTokens); // totalTokens
+
+                    agent2 = new MinimaxAgent(5, 0, 0, weights);
+                }
                 default -> {
                     System.out.println("Fatal Error. Shutting Down");
                     System.exit(1);
@@ -178,39 +259,114 @@ public class CommandLineInterface {
             }
 
             // Gameplay
-            Move lastMove = null;
-            while(!state.isGameOver()) {
-                System.out.println(state.toString());
-                if(lastMove != null)
-                    System.out.println("Last action: " + lastMove.toString());
+            if(numberOfGames == 1) {
+                Move lastMove = null;
+                while(!state.isGameOver()) {
+                    System.out.println(state.toString());
+                    if(lastMove != null)
+                        System.out.println("Last action: " + lastMove);
 
-                Move currentMove = null;
-                while(currentMove == null && !state.isGameOver()) {
-                    // Get move from agent 1
-                    if(state.getPlayerToMove() == 1) {
-                        currentMove = agent1.generateMove(state);
-                    }
-                    // Get move from agent 2
-                    else if(state.getPlayerToMove() == 2) {
-                        currentMove = agent2.generateMove(state);
-                    }
-
-                    // Handle move
-                    if(currentMove != null)
-                        if(state.handleMove(currentMove) == null) {
-                            displayIllegalMoveText();
-                            currentMove = null;
+                    Move currentMove = null;
+                    while(currentMove == null && !state.isGameOver()) {
+                        // Get move from agent 1
+                        if(state.getPlayerToMove() == 1) {
+                            currentMove = agent1.generateMove(state);
                         }
+                        // Get move from agent 2
+                        else if(state.getPlayerToMove() == 2) {
+                            currentMove = agent2.generateMove(state);
+                        }
+
+                        // Handle move
+                        if(currentMove != null)
+                            if(state.handleMove(currentMove) == null) {
+                                displayIllegalMoveText();
+                                currentMove = null;
+                            }
                     }
                     lastMove = currentMove;
-
-                    // Check game over conditions
-                    if(state.getWinner() > 0)
-                        System.out.println("Game is over! Player " + state.getWinner() + " won!");
-                    else if(state.getWinner() == 0)
-                        System.out.println("Game is over! Draw!");
                 }
+                System.out.println(state.toString());
+                if(lastMove != null)
+                    System.out.println("Last action: " + lastMove);
+
+                if(state.getWinner() > 0)
+                    System.out.println("Game is over! Player " + state.getWinner() + " won!");
+                else if(state.getWinner() == 0)
+                    System.out.println("Game is over! Draw!");
             }
+            else {
+
+                int player1OverallScore = 0, player2OverallScore = 0;
+                double averageTurnNumber1 = 0, averageTurnNumber2 = 0;
+                int draws = 0;
+
+
+                for(int i = 0; i < numberOfGames; i ++) {
+                    state = new GameState();
+                    boolean isError = false;
+                    System.out.println("Playing game " + (i + 1)  + " of " + numberOfGames + "...");
+                    while(!state.isGameOver()) {
+                        Move currentMove = null;
+                        while(currentMove == null && !state.isGameOver()) {
+                            // Get move from agent 1
+                            if(state.getPlayerToMove() == 1) {
+                                currentMove = agent1.generateMove(state);
+                            }
+                            // Get move from agent 2
+                            else if(state.getPlayerToMove() == 2) {
+                                currentMove = agent2.generateMove(state);
+                            }
+
+                            // Handle move
+                            if(currentMove != null) {
+                                if(state.handleMove(currentMove) == null) {
+                                    displayIllegalMoveText();
+                                    System.out.println(state.toString());
+                                    System.out.println(currentMove);
+                                    isError = true;
+
+                                    break;
+                                }
+                            }
+                        }
+                        if(isError)
+                            break;
+
+                        // Check game over conditions
+                        if(state.getWinner() > 0) {
+                            switch(state.getWinner()) {
+                                case 1 -> {
+                                    player1OverallScore ++;
+                                    averageTurnNumber1 += state.getTurnNumber();
+                                }
+                                case 2 -> {
+                                    player2OverallScore ++;
+                                    averageTurnNumber2 += state.getTurnNumber();
+                                }
+                            }
+                        }
+                        else if(state.getWinner() == 0)
+                            draws ++;
+                    }
+                }
+
+                if(player1OverallScore > 0)
+                    averageTurnNumber1 /= player1OverallScore;
+                if(player2OverallScore > 0)
+                    averageTurnNumber2 /= player2OverallScore;
+
+
+                System.out.println("All " + numberOfGames + " games over! Player 1 won " + player1OverallScore + " games (" +
+                        player1OverallScore*100.0/numberOfGames + "%)\n" +
+                        "Player 2 won " + player2OverallScore + " games (" +
+                        player2OverallScore*100.0/numberOfGames + "%)\n" +
+                        "There were " + draws + " draws.\n" +
+                        "The average turn number for player 1 was " + averageTurnNumber1 + "." +
+                        "The average turn number for player 2 was " + averageTurnNumber2 + ".");
+            }
+
+        }
     }
 
     /**
