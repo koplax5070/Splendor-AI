@@ -1,3 +1,4 @@
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class MinimaxAgent extends Agent {
@@ -53,6 +54,7 @@ public class MinimaxAgent extends Agent {
             newState.handleMove(move);
             possibleNextStates.add(newState);
 
+            // Move is not a blind reserve or a buy from reserve
             if(tier > 0  && index < 4) {
                 int deckSize = switch(tier) {
                     case 1 -> state.getTier1Deck().getSize();
@@ -86,6 +88,38 @@ public class MinimaxAgent extends Agent {
                     possibleNextStates.add(newState);
                 }
             }
+            // Move is a blind reserve
+            else if(index == 4) {
+                int deckSize = switch(tier) {
+                    case 1 -> state.getTier1Deck().getSize();
+                    case 2 -> state.getTier2Deck().getSize();
+                    case 3 -> state.getTier3Deck().getSize();
+                    default -> 0;
+                };
+
+                for(int i = 0; i < deckSize - 1; i ++) {
+
+                    newState = new GameState(state);
+                    newState.handleMove(move);
+                    DevelopmentCard cardFromDeck = switch (tier) {
+                        case 1 -> newState.getTier1Deck().getCard(i);
+                        case 2 -> newState.getTier2Deck().getCard(i);
+                        case 3 -> newState.getTier3Deck().getCard(i);
+                        default -> null;
+                    };
+
+                    ArrayList<DevelopmentCard> reserve = switch (move.getPlayer()) {
+                        case 1 -> newState.getPlayer1Reserve();
+                        case 2 -> newState.getPlayer2Reserve();
+                        default -> null;
+                    };
+
+                    if(reserve.size() > 0)
+                    reserve.set(reserve.size() - 1, cardFromDeck);
+                    possibleNextStates.add(newState);
+                }
+
+            }
         }
 
         return possibleNextStates;
@@ -100,7 +134,32 @@ public class MinimaxAgent extends Agent {
         int chosenMove = (minimax(state, state.getPlayerToMove(), 1, plyNumber, -2000000000, 2000000000)).intValue();
         ArrayList<Move> availableMoves = reduceTakeTokensMoves(getAvailableMoves(state), state);
 
-        return availableMoves.get(chosenMove);
+        // Check if agent attempts to do nothing, and whether they would have better available moves
+        // This helps prevent it from putting off rewards
+        Move moveToMake = availableMoves.get(chosenMove);
+        Move bestMove = moveToMake;
+        if(moveToMake instanceof TakeTokensMove) {
+            boolean doesNothing = true;
+            for(int i = 0; i < 5; i ++)
+                if(((TakeTokensMove) moveToMake).getTokensToTake()[i] != ((TakeTokensMove) moveToMake).getTokensToReturn()[i])
+                    doesNothing = false;
+
+            // If the program does nothing, check for moves that could earn points, then moves that buy cards
+            if(doesNothing) {
+                int pointsAdded = 0;
+                for (Move possibleMove : availableMoves) {
+                    if (possibleMove instanceof BuyCardMove) {
+                        if(getPointsFromMove(state, (BuyCardMove)possibleMove) > pointsAdded) {
+                            bestMove = possibleMove;
+                            pointsAdded = getPointsFromMove(state, (BuyCardMove) possibleMove);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        return bestMove;
     }
 
     /**
